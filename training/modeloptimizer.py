@@ -1,10 +1,9 @@
 from typing import Callable, Any
 
 import os
-import numpy as np
+import functools
 import pandas as pd
 import tensorflow as tf
-from functools import cmp_to_key
 from tensorboard.plugins.hparams import api as hp
 
 class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
@@ -26,7 +25,7 @@ class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
                 filepath = self._get_file_path(epoch, batch=None, logs=logs)
 
                 self._checkpoints.append({ "value": monitor_value, "path": filepath })
-                self._checkpoints.sort(key=cmp_to_key(lambda a, b: -1 if self.monitor_op(a["value"], b["value"]) else 1))
+                self._checkpoints.sort(key=functools.cmp_to_key(lambda a, b: -1 if self.monitor_op(a["value"], b["value"]) else 1))
 
                 if len(self._checkpoints) > self.n:
                     removed_checkpoint = self._checkpoints.pop(-1)
