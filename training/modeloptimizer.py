@@ -39,6 +39,10 @@ class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
 class ModelOptimizer:
     """Class responsible for optimizing the hyperparameters of a model"""
 
+    SPECIAL_ACTIVATION_FUNCTIONS = {
+        "leaky_relu": tf.keras.layers.LeakyReLU(),
+    }
+
     def __init__(
         self,
         factory: Callable[[dict[str, Any]], tf.keras.Model],
@@ -207,7 +211,12 @@ class ModelOptimizer:
 
     def _convert_hparams_dict(self, hparams: dict[hp.HParam, Any]) -> dict[str, Any]:
         """Converts a dictionary of hyperparameters from hp.HParam to str"""
-        return { hparam.name: value for hparam, value in hparams.items() }
+        hparam_dict = {}
+        for hparam, value in hparams.items():
+            if hparam.name == "activation":
+                value = self.SPECIAL_ACTIVATION_FUNCTIONS.get(value, value)
+            hparam_dict[hparam.name] = value
+        return hparam_dict
 
     def _generate_model_out_name(self, model_name_prefix: str = "model") -> str:
         """Generates the template for the model output name"""
