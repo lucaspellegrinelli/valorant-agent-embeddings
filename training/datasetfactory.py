@@ -17,7 +17,7 @@ class DatasetFactory:
         self.map_encoder = OneHotEncoder()
         self.std_scaler = StandardScaler()
 
-    def generate_dataset(self, batch_size, test_size=0.2):
+    def generate_dataset(self, batch_size: int, test_size: float = 0.2):
         """Generates the dataset"""
 
         # Loads and preprocesses the data
@@ -114,7 +114,7 @@ class DatasetFactory:
 
         return np.array(all_agents_ohe), np.array(all_maps_ohe), np.array(all_stats)
 
-    def _preprocess_data(self, agents, maps, stats):
+    def _preprocess_data(self, agents: np.ndarray, maps: np.ndarray, stats: np.ndarray):
         orig_agents_shape = agents.shape
         orig_maps_shape = maps.shape
         orig_stats_shape = stats.shape
@@ -132,5 +132,5 @@ class DatasetFactory:
         stats = stats.reshape(orig_stats_shape)
         return agents, maps, stats
 
-    def _get_agent_data(self, agent_info):
+    def _get_agent_data(self, agent_info: dict[str, float]):
         return [ agent_info[metric] for metric in self.AGENT_DATA ]

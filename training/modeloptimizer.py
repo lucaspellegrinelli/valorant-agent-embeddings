@@ -21,15 +21,18 @@ class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
         if self.save_freq == "epoch":
             monitor_value = logs.get(self.monitor)
 
-            if len(self._checkpoints) < self.n or any(self.monitor_op(monitor_value, cp["value"]) for cp in self._checkpoints):
-                filepath = self._get_file_path(epoch, batch=None, logs=logs)
+            # If it's the best model yet, we need to make room for it
+            if self.monitor_op(monitor_value, self.best):
 
-                self._checkpoints.append({ "value": monitor_value, "path": filepath })
-                self._checkpoints.sort(key=functools.cmp_to_key(lambda a, b: -1 if self.monitor_op(a["value"], b["value"]) else 1))
-
-                if len(self._checkpoints) > self.n:
+                # If we already have N checkpoints, we delete the worst one to make room for the new one
+                if len(self._checkpoints) >= self.n:
                     removed_checkpoint = self._checkpoints.pop(-1)
                     os.remove(removed_checkpoint["path"])
+
+                # We add the new checkpoint to the list
+                filepath = self._get_file_path(epoch, batch=None, logs=logs)
+                self._checkpoints.append({ "value": monitor_value, "path": filepath })
+                self._checkpoints.sort(key=functools.cmp_to_key(lambda a, b: -1 if self.monitor_op(a["value"], b["value"]) else 1))
 
             self._save_model(epoch=epoch, batch=None, logs=logs)
 
