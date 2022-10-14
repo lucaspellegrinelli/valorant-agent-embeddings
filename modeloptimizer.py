@@ -6,6 +6,33 @@ import pandas as pd
 import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
 
+class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
+    """Keras Callback that saves the best N checkpoints based on a given metric."""
+
+    def __init__(self, n: int, filepath: str, monitor: str = "val_loss"):
+        super().__init__(filepath=filepath, monitor=monitor, save_best_only=True)
+        self.n = n
+        self.filepath = filepath
+        self._checkpoints = []
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.epochs_since_last_save += 1
+
+        if self.save_freq == "epoch":
+            monitor_value = logs.get(self.monitor)
+
+            if len(self._checkpoints) < self.n or any(self.monitor_op(monitor_value, cp["value"]) for cp in self._checkpoints):
+                filepath = self._get_file_path(epoch, batch=None, logs=logs)
+
+                self._checkpoints.append({ "value": monitor_value, "path": filepath })
+                self._checkpoints.sort(key=lambda a, b: 1 if self.monitor_op(a["value"], b["value"]) else -1)
+
+                if len(self._checkpoints) > self.n:
+                    removed_checkpoint = self._checkpoints.pop(-1)
+                    os.remove(removed_checkpoint["path"])
+
+            self._save_model(epoch=epoch, batch=None, logs=logs)
+
 class ModelOptimizer:
     """Class responsible for optimizing the hyperparameters of a model"""
 
@@ -16,19 +43,22 @@ class ModelOptimizer:
         losses: dict[str, str] | list[str],
         metrics: dict[str, str] | list[str],
         monitor: str = "val_loss",
+        n_models: int = 5,
         early_stopping_patience: int = 10,
         reduce_lr_factor: float = 0.2,
         reduce_lr_patience: int = 10,
         tensorboard_log: bool = False,
         tensorboard_log_dir: str = "logs/hparam_tuning",
         model_out_dir: str = "",
-        model_out_name: str = None
+        model_out_name: str = None,
+        extra_callbacks: list[tf.keras.callbacks.Callback] = None
     ):
         self.model_factory = factory
         self.model_losses = losses
         self.model_metrics = metrics
 
         self.monitor = monitor
+        self.n_models = n_models
         self.early_stopping_patience = early_stopping_patience
         self.reduce_lr_factor = reduce_lr_factor
         self.reduce_lr_patience = reduce_lr_patience
@@ -36,11 +66,30 @@ class ModelOptimizer:
         self.tensorboard_log_dir = tensorboard_log_dir
         self.model_out_dir = model_out_dir
         self.model_out_name = model_out_name
+        self.extra_callbacks = extra_callbacks
 
         self._hp_metrics = []
         self._hp_params = hyperparams
 
         self._iteration_counter = 0
+
+        self._default_callbacks = [
+            SaveBestNCheckpoints(
+                self.n_models,
+                filepath=self._model_out_path,
+                monitor=self.monitor
+            ),
+            tf.keras.callbacks.EarlyStopping(
+                monitor=self.monitor,
+                patience=self.early_stopping_patience,
+                verbose=1
+            ),
+            tf.keras.callbacks.ReduceLROnPlateau(
+                monitor=self.monitor,
+                factor=self.reduce_lr_factor,
+                patience=self.reduce_lr_patience
+            )
+        ]
 
         self._initialize()
 
@@ -118,27 +167,9 @@ class ModelOptimizer:
 
     def _get_callbacks(self, hparams: dict[hp.HParam, Any]) -> list[tf.keras.callbacks.Callback]:
         """Returns a list of callbacks to be used during model training"""
-        callbacks = [
-            tf.keras.callbacks.ModelCheckpoint(
-                filepath=self._model_out_path,
-                monitor=self.monitor,
-                verbose=1,
-                save_best_only=True
-            ),
-            tf.keras.callbacks.EarlyStopping(
-                monitor=self.monitor,
-                patience=self.early_stopping_patience,
-                verbose=1
-            ),
-            tf.keras.callbacks.ReduceLROnPlateau(
-                monitor=self.monitor,
-                factor=self.reduce_lr_factor,
-                patience=self.reduce_lr_patience
-            )
-        ]
-
+        new_callbacks = []
         if self.tensorboard_log:
-            callbacks.extend([
+            new_callbacks.extend([
                 tf.keras.callbacks.TensorBoard(
                     log_dir=self.tensorboard_log_dir
                 ),
@@ -148,7 +179,10 @@ class ModelOptimizer:
                 )
             ])
 
-        return callbacks
+        if self.extra_callbacks is not None:
+            new_callbacks.extend(self.extra_callbacks)
+
+        return self._default_callbacks + new_callbacks
 
     def _get_hp_metrics(self) -> list[hp.Metric]:
         """Returns a list of all metrics to be monitored in a list of hp.Metric"""
