@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
 
-model_path = "models/model-1.3992-032-0.7030-0.4563.h5"
+model_path = "models/model-1.3831-037-0.7071-0.4545.h5"
 
 with open("data/contextualdata/X_agents_test.pkl", "rb") as f:
     X_agents = pickle.load(f)

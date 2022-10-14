@@ -4,13 +4,14 @@ import os
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from functools import cmp_to_key
 from tensorboard.plugins.hparams import api as hp
 
 class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
     """Keras Callback that saves the best N checkpoints based on a given metric."""
 
-    def __init__(self, n: int, filepath: str, monitor: str = "val_loss"):
-        super().__init__(filepath=filepath, monitor=monitor, save_best_only=True)
+    def __init__(self, n: int, filepath: str, monitor: str = "val_loss", verbose: int = 0, **kwargs):
+        super().__init__(filepath=filepath, monitor=monitor, save_best_only=True, verbose=verbose, **kwargs)
         self.n = n
         self.filepath = filepath
         self._checkpoints = []
@@ -25,7 +26,7 @@ class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
                 filepath = self._get_file_path(epoch, batch=None, logs=logs)
 
                 self._checkpoints.append({ "value": monitor_value, "path": filepath })
-                self._checkpoints.sort(key=lambda a, b: 1 if self.monitor_op(a["value"], b["value"]) else -1)
+                self._checkpoints.sort(key=cmp_to_key(lambda a, b: -1 if self.monitor_op(a["value"], b["value"]) else 1))
 
                 if len(self._checkpoints) > self.n:
                     removed_checkpoint = self._checkpoints.pop(-1)
@@ -71,13 +72,16 @@ class ModelOptimizer:
         self._hp_metrics = []
         self._hp_params = hyperparams
 
+        self._initialize()
+
         self._iteration_counter = 0
 
         self._default_callbacks = [
             SaveBestNCheckpoints(
                 self.n_models,
                 filepath=self._model_out_path,
-                monitor=self.monitor
+                monitor=self.monitor,
+                verbose=1
             ),
             tf.keras.callbacks.EarlyStopping(
                 monitor=self.monitor,
@@ -91,8 +95,6 @@ class ModelOptimizer:
             )
         ]
 
-        self._initialize()
-
     @property
     def _model_out_path(self) -> str:
         """Returns the path to the model output file"""
@@ -101,7 +103,6 @@ class ModelOptimizer:
     def _initialize(self) -> None:
         """Initializes the metric list, file writer and model output name"""
         self._hp_metrics = self._get_hp_metrics()
-        
         if self.tensorboard_log:
             with tf.summary.create_file_writer(self.tensorboard_log_dir).as_default():
                 hp.hparams_config(hparams=self._hp_params, metrics=self._hp_metrics)
