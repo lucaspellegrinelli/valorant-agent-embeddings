@@ -56,7 +56,8 @@ optimizer = ModelOptimizer(
     hyperparams=hparams,
     losses={ "agent": "categorical_crossentropy", "stat": "mse" },
     metrics={ "agent": "accuracy", "stat": "mse" },
-    model_out_dir="models"
+    model_out_dir="models",
+    tensorboard_log=True
 )
 
 while True:
