@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
@@ -8,7 +7,7 @@ from sklearn.decomposition import PCA
 
 from training.datasetfactory import DatasetFactory
 
-model_path = "models/model-2.5610-036-0.6244-1.3004.h5"
+model_path = "models/model-2.1692-042-0.6821-1.0761.h5"
 
 dataset_factory = DatasetFactory(scrapped_comps_file="data/comps.jsonl")
 _, ((agents_x, maps_x, stats_x), (agents_y, stats_y)) = dataset_factory.generate_dataset(as_tf_dataset=False)

@@ -5,14 +5,14 @@ from training.modeloptimizer import ModelOptimizer
 from training.contextualmodel import contextual_autoencoder
 
 hparams = [
-    hp.HParam("input_processing_size", hp.IntInterval(32, 256)),
-    hp.HParam("output_processing_size", hp.IntInterval(32, 256)),
-    hp.HParam("layer_a_size", hp.IntInterval(32, 512)),
-    hp.HParam("layer_b_size", hp.IntInterval(16, 256)),
-    hp.HParam("latent_size", hp.Discrete([2])),
-    hp.HParam("dropout", hp.RealInterval(0.1, 0.5)),
-    hp.HParam("optimizer", hp.Discrete(["adam", "sgd", "rmsprop", "adagrad"])),
-    hp.HParam("activation", hp.Discrete(["relu", "tanh", "elu", "selu"]))
+    hp.HParam("input_processing_size", hp.Discrete([16, 32, 64])),
+    hp.HParam("output_processing_size", hp.Discrete([16, 32, 64])),
+    hp.HParam("layer_a_size", hp.Discrete([128, 192, 256])),
+    hp.HParam("layer_b_size", hp.Discrete([32, 64, 128])),
+    hp.HParam("latent_size", hp.Discrete([16])),
+    hp.HParam("dropout", hp.RealInterval(0.1, 0.33)),
+    hp.HParam("optimizer", hp.Discrete(["adam", "rmsprop"])),
+    hp.HParam("activation", hp.Discrete(["relu"]))
 ]
 
 optimizer = ModelOptimizer(
