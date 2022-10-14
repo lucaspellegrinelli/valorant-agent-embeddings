@@ -1,0 +1,166 @@
+from typing import Callable, Any
+
+import os
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tensorboard.plugins.hparams import api as hp
+
+class ModelOptimizer:
+    """Class responsible for optimizing the hyperparameters of a model"""
+
+    def __init__(
+        self,
+        factory: Callable[[dict[str, Any]], tf.keras.Model],
+        hyperparams: list[hp.HParam],
+        losses: dict[str, str] | list[str],
+        metrics: dict[str, str] | list[str],
+        monitor: str = "val_loss",
+        early_stopping_patience: int = 10,
+        reduce_lr_factor: float = 0.2,
+        reduce_lr_patience: int = 10,
+        tensorboard_log_dir: str = "logs/hparam_tuning",
+        model_out_dir: str = "",
+        model_out_name: str = None
+    ):
+        self.model_factory = factory
+        self.model_losses = losses
+        self.model_metrics = metrics
+
+        self.monitor = monitor
+        self.early_stopping_patience = early_stopping_patience
+        self.reduce_lr_factor = reduce_lr_factor
+        self.reduce_lr_patience = reduce_lr_patience
+        self.tensorboard_log_dir = tensorboard_log_dir
+        self.model_out_dir = model_out_dir
+        self.model_out_name = model_out_name
+
+        self.hp_metrics = []
+        self.hp_params = hyperparams
+
+        self.iteration_counter = 0
+
+        self.initialize()
+
+    @property
+    def model_out_path(self) -> str:
+        """Returns the path to the model output file"""
+        return os.path.join(self.model_out_dir, self.model_out_name)
+
+    def initialize(self) -> None:
+        """Initializes the metric list, file writer and model output name"""
+        self.hp_metrics = self.get_hp_metrics()
+        
+        with tf.summary.create_file_writer(self.tensorboard_log_dir).as_default():
+            hp.hparams_config(hparams=self.hp_params, metrics=self.hp_metrics)
+
+        if self.model_out_name is None:
+            self.model_out_name = self.generate_model_out_name()
+
+    def run_iteration(self, inputs: np.ndarray, targets: np.ndarray, val_inputs: np.ndarray, val_targets: np.ndarray, batch_size: int = 32, run_name_prefix: str = "iteration") -> None:
+        """Runs a single iteration of the hyperparameter optimization"""
+        run_name = f"{run_name_prefix}-{self.iteration_counter}"
+        run_path = os.path.join(self.tensorboard_log_dir, run_name)
+
+        with tf.summary.create_file_writer(run_path).as_default():
+            # Generating random hyperparameters
+            hparams = self.get_random_hparams()
+            hp.hparams(hparams)
+
+            # Fitting model with random hyperparameters
+            best_metrics = self.fit_model(hparams, inputs, targets, val_inputs, val_targets, batch_size)
+
+            # Logging the best metrics
+            for metric in self.hp_metrics:
+                tf.summary.scalar(metric.name, best_metrics[metric.name], step=1)
+
+    def fit_model(self, hparams: dict[hp.HParam, Any], inputs: np.ndarray, targets: np.ndarray, val_inputs: np.ndarray, val_targets: np.ndarray, batch_size: int) -> pd.Series:
+        """Fits the model with the given hyperparameters and returns the best metrics"""
+        # Generating hparams
+        random_hparams_str = self.convert_hparams_dict(hparams)
+
+        # Creating model with random hparams
+        model = self.model_factory(random_hparams_str)
+
+        # Compiling model
+        model.compile(
+            optimizer=random_hparams_str["optimizer"] if "optimizer" in random_hparams_str else "adam",
+            loss=self.model_losses,
+            metrics=self.model_metrics
+        )
+
+        # Fitting model
+        history = model.fit(
+            x=inputs,
+            y=targets,
+            validation_data=(val_inputs, val_targets),
+            epochs=999,
+            batch_size=batch_size,
+            verbose=2,
+            callbacks=self.get_callbacks(hparams)
+        )
+
+        # Returning the best row in the history
+        history_df = pd.DataFrame(history.history)
+        return history_df.iloc[-self.early_stopping_patience]
+
+    def get_callbacks(self, hparams: dict[hp.HParam, Any]) -> list[tf.keras.callbacks.Callback]:
+        """Returns a list of callbacks to be used during model training"""
+        return [
+            tf.keras.callbacks.ModelCheckpoint(
+                filepath=self.model_out_path,
+                monitor=self.monitor,
+                verbose=1,
+                save_best_only=True
+            ),
+            tf.keras.callbacks.EarlyStopping(
+                monitor=self.monitor,
+                patience=self.early_stopping_patience,
+                verbose=1
+            ),
+            tf.keras.callbacks.ReduceLROnPlateau(
+                monitor=self.monitor,
+                factor=self.reduce_lr_factor,
+                patience=self.reduce_lr_patience
+            ),
+            tf.keras.callbacks.TensorBoard(
+                log_dir=self.tensorboard_log_dir
+            ),
+            hp.KerasCallback(
+                writer=self.tensorboard_log_dir,
+                hparams=hparams
+            )
+        ]
+
+    def get_hp_metrics(self) -> list[hp.Metric]:
+        """Returns a list of all metrics to be monitored in a list of hp.Metric"""
+        hpmetrics = []
+        if isinstance(self.model_metrics, list):
+            for metric in self.model_metrics:
+                val_metric = f"val_{metric}"
+                hpmetrics.append(hp.Metric(metric, display_name=metric))
+                hpmetrics.append(hp.Metric(val_metric, display_name=val_metric))
+        else:
+            for layer, metric in self.model_metrics.items():
+                metric_str = f"{layer}_{metric}"
+                val_metric_str = f"val_{layer}_{metric}"
+                hpmetrics.append(hp.Metric(metric_str, display_name=metric_str))
+                hpmetrics.append(hp.Metric(val_metric_str, display_name=val_metric_str))
+        return hpmetrics
+
+    def get_random_hparams(self) -> dict[hp.HParam, Any]:
+        """Returns a dictionary of random hyperparameters"""
+        return { hparam: hparam.domain.sample_uniform() for hparam in self.hp_params }
+
+    def convert_hparams_dict(self, hparams: dict[hp.HParam, Any]) -> dict[str, Any]:
+        """Converts a dictionary of hyperparameters from hp.HParam to str"""
+        return { hparam.name: value for hparam, value in hparams.items() }
+
+    def generate_model_out_name(self, model_name_prefix: str = "model") -> str:
+        """Generates the template for the model output name"""
+        model_name = model_name_prefix + "-{val_loss:.4f}-{epoch:03d}"
+        for hp_metric in self.hp_metrics:
+            metric_name = hp_metric.as_proto().display_name
+            if metric_name.startswith("val_") and metric_name != "val_loss":
+                model_name += f"-{{{metric_name}:.4f}}"
+        return f"{model_name}.h5"
