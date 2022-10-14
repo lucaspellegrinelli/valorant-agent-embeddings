@@ -110,7 +110,7 @@ class ModelOptimizer:
         if self.model_out_name is None:
             self.model_out_name = self._generate_model_out_name()
 
-    def run_iteration(self, inputs: np.ndarray, targets: np.ndarray, val_inputs: np.ndarray, val_targets: np.ndarray, batch_size: int = 32, run_name_prefix: str = "iteration") -> None:
+    def run_iteration(self, train_dataset: tf.data.Dataset, validation_dataset: tf.data.Dataset, run_name_prefix: str = "iteration") -> None:
         """Runs a single iteration of the hyperparameter optimization"""
         run_name = f"{run_name_prefix}-{self._iteration_counter}"
         run_path = os.path.join(self.tensorboard_log_dir, run_name)
@@ -118,25 +118,25 @@ class ModelOptimizer:
         if self.tensorboard_log:
             with tf.summary.create_file_writer(run_path).as_default():
                 # Fitting model with random hyperparameters
-                best_metrics = self._fit_random_model(inputs, targets, val_inputs, val_targets, batch_size)
+                best_metrics = self._fit_random_model(train_dataset, validation_dataset)
 
                 # Logging the best metrics
                 for metric in self._hp_metrics:
                     tf.summary.scalar(metric.name, best_metrics[metric.name], step=1)
         else:
             # Fitting model with random hyperparameters
-            self._fit_random_model(inputs, targets, val_inputs, val_targets, batch_size)
+            self._fit_random_model(train_dataset, validation_dataset)
 
-    def _fit_random_model(self, inputs: np.ndarray, targets: np.ndarray, val_inputs: np.ndarray, val_targets: np.ndarray, batch_size: int) -> pd.Series:
+    def _fit_random_model(self, train_dataset: tf.data.Dataset, validation_dataset: tf.data.Dataset) -> pd.Series:
         """Fits a model with random hyperparameters and returns the best metrics"""
         # Generating random hyperparameters
         hparams = self._get_random_hparams()
         hp.hparams(hparams)
 
         # Fitting model with random hyperparameters
-        return self._fit_model(hparams, inputs, targets, val_inputs, val_targets, batch_size)
+        return self._fit_model(hparams, train_dataset, validation_dataset)
 
-    def _fit_model(self, hparams: dict[hp.HParam, Any], inputs: np.ndarray, targets: np.ndarray, val_inputs: np.ndarray, val_targets: np.ndarray, batch_size: int) -> pd.Series:
+    def _fit_model(self, hparams: dict[hp.HParam, Any], train_dataset: tf.data.Dataset, validation_dataset: tf.data.Dataset) -> pd.Series:
         """Fits the model with the given hyperparameters and returns the best metrics"""
         # Generating hparams
         random_hparams_str = self._convert_hparams_dict(hparams)
@@ -153,11 +153,9 @@ class ModelOptimizer:
 
         # Fitting model
         history = model.fit(
-            x=inputs,
-            y=targets,
-            validation_data=(val_inputs, val_targets),
+            train_dataset,
+            validation_data=validation_dataset,
             epochs=999,
-            batch_size=batch_size,
             verbose=2,
             callbacks=self._get_callbacks(hparams)
         )

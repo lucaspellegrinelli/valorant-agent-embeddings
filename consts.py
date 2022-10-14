@@ -1,2 +1,0 @@
-ALL_AGENTS = ["Brimstone", "Viper", "Omen", "Killjoy", "Cypher", "Sova", "Sage", "Phoenix", "Jett", "Raze", "Reyna", "Breach", "Skye", "Yoru", "Astra", "Kayo", "Neon", "Fade", "Chamber"]
-ALL_MAPS = ["Bind", "Haven", "Split", "Ascent", "Icebox", "Breeze", "Fracture", "Pearl"]
