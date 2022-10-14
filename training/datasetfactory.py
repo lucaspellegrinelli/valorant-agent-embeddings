@@ -17,7 +17,7 @@ class DatasetFactory:
         self.map_encoder = OneHotEncoder()
         self.std_scaler = StandardScaler()
 
-    def generate_dataset(self, batch_size: int, test_size: float = 0.2):
+    def generate_dataset(self, test_size: float = 0.2, as_tf_dataset: bool = True):
         """Generates the dataset"""
 
         # Loads and preprocesses the data
@@ -72,17 +72,21 @@ class DatasetFactory:
             y_stats_test[test_idx_start : test_idx_end, :] = stats_test[:, y_i, :]
 
         # Creates the datasets
-        training_dataset = tf.data.Dataset.zip((
-            tf.data.Dataset.from_tensor_slices((x_agents_train, x_maps_train, x_stats_train)),
-            tf.data.Dataset.from_tensor_slices((y_agents_train, y_stats_train))
-        ))
+        if as_tf_dataset:
+            training_dataset = tf.data.Dataset.zip((
+                tf.data.Dataset.from_tensor_slices((x_agents_train, x_maps_train, x_stats_train)),
+                tf.data.Dataset.from_tensor_slices((y_agents_train, y_stats_train))
+            ))
 
-        test_dataset = tf.data.Dataset.zip((
-            tf.data.Dataset.from_tensor_slices((x_agents_test, x_maps_test, x_stats_test)),
-            tf.data.Dataset.from_tensor_slices((y_agents_test, y_stats_test))
-        ))
+            test_dataset = tf.data.Dataset.zip((
+                tf.data.Dataset.from_tensor_slices((x_agents_test, x_maps_test, x_stats_test)),
+                tf.data.Dataset.from_tensor_slices((y_agents_test, y_stats_test))
+            )) 
+        else:
+            training_dataset = (x_agents_train, x_maps_train, x_stats_train), (y_agents_train, y_stats_train)
+            test_dataset = (x_agents_test, x_maps_test, x_stats_test), (y_agents_test, y_stats_test)
 
-        return training_dataset.batch(batch_size), test_dataset.batch(batch_size)
+        return training_dataset, test_dataset
 
     def _load_data(self):
         all_agents_ohe = []
