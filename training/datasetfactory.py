@@ -145,4 +145,6 @@ class DatasetFactory:
         for metric in ALL_STATS:
             player_data.append(player_info[metric]["atk"])
             player_data.append(player_info[metric]["def"])
+
         return player_data
+        

@@ -46,6 +46,9 @@ class VLRScraper:
                     else:
                         team_b_players.append(item)
 
+            if len(team_a_players) != 5 or len(team_b_players) != 5:
+                continue
+
             game_result = GameResult(
                 match_id=match_id,
                 game_id=game_id,
