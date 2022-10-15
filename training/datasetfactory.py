@@ -119,8 +119,13 @@ class DatasetFactory:
                 stats_a = [self._get_player_data(player) for player in data["team_a"]["players"]]
                 stats_b = [self._get_player_data(player) for player in data["team_b"]["players"]]
 
-                meta_a = { "match_id": data["match_id"], "game_id": data["game_id"], "team": data["team_a"]["team"], "score": data["team_a"]["score"] }
-                meta_b = { "match_id": data["match_id"], "game_id": data["game_id"], "team": data["team_b"]["team"], "score": data["team_b"]["score"] }
+                score_a = float(data["team_a"]["score"])
+                score_b = float(data["team_b"]["score"])
+                total_rounds = score_a + score_b
+                wr_a = score_a / total_rounds
+                wr_b = score_b / total_rounds
+                meta_a = { "match_id": data["match_id"], "game_id": data["game_id"], "team": data["team_a"]["team"], "wr": wr_a }
+                meta_b = { "match_id": data["match_id"], "game_id": data["game_id"], "team": data["team_b"]["team"], "wr": wr_b }
 
                 all_agents_ohe.append(agents_a)
                 all_agents_ohe.append(agents_b)
