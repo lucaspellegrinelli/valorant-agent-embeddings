@@ -9,7 +9,7 @@ The goal of this project is create contextual embeddings for VALORANT agents wit
 The idea for training the neural network is making it learn to fill a 4 player composition with what's missing. We generate the dataset by having a lot of compositions gathered from professional matchs and then removing one of the agents in there to have our 4 player input. The goal for the neural network will be predicting what was that 5th player we removed, so that's our label for the supervised training.
 
 <p align="center">
-  <img width="75%" src="https://i.imgur.com/10q2CtR.png">
+  <img width="75%" src="https://i.imgur.com/pfigRqI.png">
 </p>
 
 ### Model architecture
