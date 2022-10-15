@@ -4,8 +4,18 @@ The goal of this project is create contextual embeddings for VALORANT agents wit
 
 ## Model Training (how does it learn context?)
 
-Todo
+<p align="center">
+  <img width="75%" src="https://i.imgur.com/10q2CtR.png">
+</p>
+
+## Model Architecture
+
+<p align="center">
+  <img width="100%" src="https://i.imgur.com/Lqik22T.png">
+</p>
 
 ## Data Scraping
 
-<img width="100%" src="https://i.imgur.com/YXDip4T.png">
+<p align="center">
+  <img width="100%" src="https://i.imgur.com/EbkmB50.png">
+</p>
