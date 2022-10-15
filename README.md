@@ -28,7 +28,7 @@ In the middle of the neural network there's the latent dimension. It is very imp
 The exact values for the number of layers, number of neurons and etc are optimized, so I won't be specifying those here.
 
 <p align="center">
-  <img width="100%" src="https://i.imgur.com/Lqik22T.png">
+  <img width="100%" src="https://i.imgur.com/j7vOo2x.png">
 </p>
 
 ### Data Scraping
