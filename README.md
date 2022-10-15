@@ -1,6 +1,10 @@
 # VALORANT Agent Embeddings
 
-The goal of this project is create contextual embeddings for VALORANT agents with respect to the composition it is inserted into. For example, a Viper with a second controller played on Bind may have a very different play style / role from a Viper played on the same map but without a second controller.
+The goal of this project is create contextual embeddings for VALORANT agents with respect to the composition it is inserted into.
+
+For example, a Viper with a second controller played on Bind may have a very different play style / role from a Viper played on the same map but without a second controller.
+
+You could try to figure out a composition in a certain map thinking not only in what agent is missing but what role that agent needs to perform inside the map. For example, by using the embeddings you could figure out that your team is missing a "defensive agent" in general, not a specific agent one like Killjoy or Cypher (or even Astra if played in that manner!), so you can choose which one you prefer.
 
 ## How it works?
 
