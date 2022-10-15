@@ -23,7 +23,11 @@ class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
                 # If we already have N checkpoints, we delete the worst one to make room for the new one
                 if len(self._checkpoints) >= self.n:
                     removed_checkpoint = self._checkpoints.pop(-1)
-                    os.remove(removed_checkpoint["path"])
+                    try:
+                        os.remove(removed_checkpoint["path"])
+                    except FileNotFoundError:
+                        pass
+
 
                 # We add the new checkpoint to the list
                 filepath = self._get_file_path(epoch, batch=None, logs=logs)
