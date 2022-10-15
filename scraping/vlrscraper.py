@@ -25,6 +25,10 @@ class VLRScraper:
 
         # Get game results
         game_results: list[GameResult] = []
+
+        if len(match_maps) == 0:
+            return game_results
+
         for played_map in stats_html.find_all("div", { "class": "vm-stats-game"}):
             game_id = played_map["data-game-id"]
             if game_id == "all":
@@ -116,7 +120,7 @@ class VLRScraper:
             game_id = played_map["data-game-id"]
             if game_id == "all":
                 continue
-
+            
             map_name = played_map.get_text().strip().replace("\n", "").replace("\t", "")
             map_name = "".join(c for c in map_name if not c.isdigit())
             match_maps.append({ "game_id": game_id, "map_name": map_name })
