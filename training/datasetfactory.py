@@ -25,11 +25,11 @@ class DatasetFactory:
         """Generates the dataset"""
 
         # Loads and preprocesses the data
-        agents, maps, stats = self._load_data()
+        agents, maps, stats, meta = self._load_data()
         agents, maps, stats = self._preprocess_data(agents, maps, stats)
-        
+
         # Splits the data into train and test
-        agents_train, agents_test, maps_train, maps_test, stats_train, stats_test = train_test_split(agents, maps, stats, test_size=test_size, random_state=42)
+        agents_train, agents_test, maps_train, maps_test, stats_train, stats_test, meta_train, meta_test = train_test_split(agents, maps, stats, meta, test_size=test_size, random_state=42)
 
         # Finds data shapes
         n_train = agents_train.shape[0] * agents_train.shape[1]
@@ -52,6 +52,10 @@ class DatasetFactory:
 
         y_agents_test = np.zeros((n_test, n_agents))
         y_stats_test = np.zeros((n_test, n_stats))
+        
+        # Repeat meta data for each player
+        flat_meta_train = []
+        flat_meta_test = []
 
         # Fills the arrays
         for y_i in range(agents_train.shape[1]):
@@ -75,6 +79,9 @@ class DatasetFactory:
             y_agents_test[test_idx_start : test_idx_end, :] = agents_test[:, y_i, :]
             y_stats_test[test_idx_start : test_idx_end, :] = stats_test[:, y_i, :]
 
+            flat_meta_train.extend(meta_train)
+            flat_meta_test.extend(meta_test)
+
         # Creates the datasets
         if as_tf_dataset:
             training_dataset = tf.data.Dataset.zip((
@@ -85,17 +92,18 @@ class DatasetFactory:
             test_dataset = tf.data.Dataset.zip((
                 tf.data.Dataset.from_tensor_slices((x_agents_test, x_maps_test, x_stats_test)),
                 tf.data.Dataset.from_tensor_slices((y_agents_test, y_stats_test))
-            )) 
+            ))
         else:
             training_dataset = (x_agents_train, x_maps_train, x_stats_train), (y_agents_train, y_stats_train)
             test_dataset = (x_agents_test, x_maps_test, x_stats_test), (y_agents_test, y_stats_test)
 
-        return training_dataset, test_dataset
+        return training_dataset, test_dataset, flat_meta_train, flat_meta_test
 
     def _load_data(self):
         all_agents_ohe = []
         all_maps_ohe = []
         all_stats = []
+        all_meta = []
 
         with open(self.scrapped_comps_file, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -111,6 +119,9 @@ class DatasetFactory:
                 stats_a = [self._get_player_data(player) for player in data["team_a"]["players"]]
                 stats_b = [self._get_player_data(player) for player in data["team_b"]["players"]]
 
+                meta_a = { "match_id": data["match_id"], "game_id": data["game_id"], "team": data["team_a"]["team"], "score": data["team_a"]["score"] }
+                meta_b = { "match_id": data["match_id"], "game_id": data["game_id"], "team": data["team_b"]["team"], "score": data["team_b"]["score"] }
+
                 all_agents_ohe.append(agents_a)
                 all_agents_ohe.append(agents_b)
                 
@@ -120,7 +131,10 @@ class DatasetFactory:
                 all_stats.append(stats_a)
                 all_stats.append(stats_b)
 
-        return np.array(all_agents_ohe), np.array(all_maps_ohe), np.array(all_stats)
+                all_meta.append(meta_a)
+                all_meta.append(meta_b)
+
+        return np.array(all_agents_ohe), np.array(all_maps_ohe), np.array(all_stats), all_meta
 
     def _preprocess_data(self, agents: np.ndarray, maps: np.ndarray, stats: np.ndarray):
         orig_agents_shape = agents.shape

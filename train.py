@@ -30,7 +30,7 @@ optimizer = ModelOptimizer(
 )
 
 dataset_factory = DatasetFactory(scrapped_comps_file="data/comps.jsonl")
-training_dataset, test_dataset = dataset_factory.generate_dataset(as_tf_dataset=True)
+training_dataset, test_dataset, _, _ = dataset_factory.generate_dataset(as_tf_dataset=True)
 
 while True:
     optimizer.run_iteration(training_dataset, test_dataset, batch_size=32)

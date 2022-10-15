@@ -26,7 +26,6 @@ class SaveBestNCheckpoints(tf.keras.callbacks.ModelCheckpoint):
                     if os.path.exists(removed_checkpoint["path"]):
                         os.remove(removed_checkpoint["path"])
 
-
                 # We add the new checkpoint to the list
                 filepath = self._get_file_path(epoch, batch=None, logs=logs)
                 self._checkpoints.append({ "value": monitor_value, "path": filepath })
