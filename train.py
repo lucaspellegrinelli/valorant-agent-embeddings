@@ -4,6 +4,8 @@ from training.datasetfactory import DatasetFactory
 from training.modeloptimizer import ModelOptimizer
 from training.contextualmodel import contextual_autoencoder
 
+from utils.consts import ALL_AGENTS, ALL_MAPS, ALL_STATS
+
 hparams = [
     hp.HParam("input_processing_size", hp.Discrete([16, 32, 64])),
     hp.HParam("output_processing_size", hp.Discrete([16, 32, 64])),
@@ -15,8 +17,11 @@ hparams = [
     hp.HParam("activation", hp.Discrete(["relu"]))
 ]
 
+def ContextualAutoencoder(hparams):
+    return contextual_autoencoder(hparams, len(ALL_MAPS), len(ALL_AGENTS), 2 * len(ALL_STATS))
+
 optimizer = ModelOptimizer(
-    factory=contextual_autoencoder,
+    factory=ContextualAutoencoder,
     hyperparams=hparams,
     losses={ "agent": "categorical_crossentropy", "stat": "mse" },
     metrics={ "agent": "accuracy", "stat": "mse" },

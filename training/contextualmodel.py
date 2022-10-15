@@ -1,16 +1,16 @@
 import tensorflow as tf
 
-def contextual_autoencoder(hparams):
-    input_maps = tf.keras.layers.Input(shape=(8,))
+def contextual_autoencoder(hparams, n_maps, n_agents, n_stats):
+    input_maps = tf.keras.layers.Input(shape=(n_maps,))
     maps_x = tf.keras.layers.Dense(hparams["input_processing_size"], activation=hparams["activation"])(input_maps)
     maps_x = tf.keras.layers.BatchNormalization()(maps_x)
 
-    input_agents = tf.keras.layers.Input(shape=(4, 19,))
+    input_agents = tf.keras.layers.Input(shape=(4, n_agents,))
     agents_x = tf.keras.layers.Flatten()(input_agents)
     agents_x = tf.keras.layers.Dense(hparams["input_processing_size"], activation=hparams["activation"])(agents_x)
     agents_x = tf.keras.layers.BatchNormalization()(agents_x)
 
-    input_stats = tf.keras.layers.Input(shape=(4, 7,))
+    input_stats = tf.keras.layers.Input(shape=(4, n_stats,))
     stats_x = tf.keras.layers.Flatten()(input_stats)
     stats_x = tf.keras.layers.Dense(hparams["input_processing_size"], activation=hparams["activation"])(stats_x)
     stats_x = tf.keras.layers.BatchNormalization()(stats_x)
@@ -36,10 +36,10 @@ def contextual_autoencoder(hparams):
     x = tf.keras.layers.Dropout(0.2)(x)
 
     agent_output = tf.keras.layers.Dense(hparams["output_processing_size"], activation="softmax")(x)
-    agent_output = tf.keras.layers.Dense(19, activation="softmax", name="agent")(agent_output)
+    agent_output = tf.keras.layers.Dense(n_agents, activation="softmax", name="agent")(agent_output)
 
     stat_output = tf.keras.layers.Dense(hparams["output_processing_size"], activation="linear")(x)
-    stat_output = tf.keras.layers.Dense(7, activation="linear", name="stat")(stat_output)
+    stat_output = tf.keras.layers.Dense(n_stats, activation="linear", name="stat")(stat_output)
 
     model = tf.keras.models.Model(
         inputs=[input_agents, input_maps, input_stats],

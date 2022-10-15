@@ -5,16 +5,20 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+from utils.consts import ALL_AGENTS, ALL_MAPS, ALL_STATS
+
 class DatasetFactory:
     """Class to load and generate the dataset"""
-
-    AGENT_DATA = ["acs", "kills", "deaths", "assists", "adr", "fb", "fd"]
 
     def __init__(self, scrapped_comps_file: str):
         self.scrapped_comps_file = scrapped_comps_file
 
         self.agent_encoder = OneHotEncoder()
+        self.agent_encoder.fit(np.array(ALL_AGENTS).reshape(-1, 1))
+
         self.map_encoder = OneHotEncoder()
+        self.map_encoder.fit(np.array(ALL_MAPS).reshape(-1, 1))
+
         self.std_scaler = StandardScaler()
 
     def generate_dataset(self, test_size: float = 0.2, as_tf_dataset: bool = True):
@@ -98,14 +102,14 @@ class DatasetFactory:
             for line in lines:
                 data = json.loads(line)
 
-                stats_a = [self._get_agent_data(agent) for agent in data["a_team"]]
-                stats_b = [self._get_agent_data(agent) for agent in data["b_team"]]
+                agents_a = [player["agent"] for player in data["team_a"]["players"]]
+                agents_b = [player["agent"] for player in data["team_b"]["players"]]
 
-                agents_a = [agent["agent"] for agent in data["a_team"]]
-                agents_b = [agent["agent"] for agent in data["b_team"]]
+                maps_a = [data["map_name"] for _ in range(5)]
+                maps_b = [data["map_name"] for _ in range(5)]
 
-                maps_a = [data["map"] for _ in range(5)]
-                maps_b = [data["map"] for _ in range(5)]
+                stats_a = [self._get_player_data(player) for player in data["team_a"]["players"]]
+                stats_b = [self._get_player_data(player) for player in data["team_b"]["players"]]
 
                 all_agents_ohe.append(agents_a)
                 all_agents_ohe.append(agents_b)
@@ -124,11 +128,11 @@ class DatasetFactory:
         orig_stats_shape = stats.shape
 
         # One-hot encodes the agents
-        agents = self.agent_encoder.fit_transform(agents.reshape(-1, 1)).toarray()
+        agents = self.agent_encoder.transform(agents.reshape(-1, 1)).toarray()
         agents = agents.reshape(orig_agents_shape[0], orig_agents_shape[1], -1)
 
         # One-hot encodes the maps
-        maps = self.map_encoder.fit_transform(maps.reshape(-1, 1)).toarray()
+        maps = self.map_encoder.transform(maps.reshape(-1, 1)).toarray()
         maps = maps.reshape(orig_maps_shape[0], orig_maps_shape[1], -1)
 
         # Normalizes the stats
@@ -136,5 +140,9 @@ class DatasetFactory:
         stats = stats.reshape(orig_stats_shape)
         return agents, maps, stats
 
-    def _get_agent_data(self, agent_info: dict[str, float]):
-        return [ agent_info[metric] for metric in self.AGENT_DATA ]
+    def _get_player_data(self, player_info: dict[str, dict[str, float]]):
+        player_data = []
+        for metric in ALL_STATS:
+            player_data.append(player_info[metric]["atk"])
+            player_data.append(player_info[metric]["def"])
+        return player_data
