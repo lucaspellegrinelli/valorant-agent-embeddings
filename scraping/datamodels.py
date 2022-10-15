@@ -1,12 +1,6 @@
 from dataclasses import dataclass
 
 @dataclass
-class MatchTeam:
-    name: str
-    region: str
-    score: int
-
-@dataclass
 class Match:
     id: str
     date: str
@@ -14,7 +8,7 @@ class Match:
     status: str
     round: str
     stage: str
-    teams: list[MatchTeam]
+    teams: list[str]
 
 @dataclass
 class PlayerGameResult:

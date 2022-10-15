@@ -1,32 +1,40 @@
 import requests
 from bs4 import BeautifulSoup
 
-from scraping.datamodels import Match, MatchTeam, TeamGameResult, PlayerGameResult, GameResult
+from scraping.datamodels import Match, TeamGameResult, PlayerGameResult, GameResult
 
 class VLRScraper:
     def __init__(self):
         pass
 
     def get_match_info(self, match_id: int):
+        """Get info of a specific match from VLR.gg"""
+
+        # Download match page and parse it
         target_url = f"https://www.vlr.gg/{match_id}"
         content = requests.get(target_url).content
         soup = BeautifulSoup(content, "html.parser")
 
+        # Get team names
         match_header = soup.find("div", { "class": "match-header-vs" })
         [team_a_name, team_b_name] = [tn.get_text().strip() for tn in match_header.find_all("div", { "class": "wf-title-med" })]
 
+        # Get played maps
         stats_html = soup.find("div", { "class": "vm-stats" })
         match_maps = self._get_match_played_maps(stats_html)
 
+        # Get game results
         game_results: list[GameResult] = []
         for played_map in stats_html.find_all("div", { "class": "vm-stats-game"}):
             game_id = played_map["data-game-id"]
             if game_id == "all":
                 continue
 
+            # Get team scores
             [score_a, score_b] = [s.get_text().strip() for s in played_map.find_all("div", { "class": "score" })]
             map_name = next((mm["map_name"] for mm in match_maps if mm["game_id"] == game_id), None)
 
+            # Get player game stats/info
             team_a_players = []
             team_b_players = []
             scoreboard_table_html = played_map.find_all("tbody")
@@ -51,10 +59,14 @@ class VLRScraper:
         return game_results
 
     def get_event_matches(self, event_id: int):
+        """Get all matches of a specific event from VLR.gg"""
+
+        # Download event page and parse it
         target_url = f"https://www.vlr.gg/event/matches/{event_id}/?series_id=all"
         content = requests.get(target_url).content
         soup = BeautifulSoup(content, "html.parser")
 
+        # Get matches info
         matches: list[Match] = []
         dates = soup.find_all("div", { "class": "wf-label mod-large" })
         for (day, date) in enumerate(dates):
@@ -123,9 +135,7 @@ class VLRScraper:
             teams_html = match_html.find_all("div", { "class": "match-item-vs-team" })
             for team_html in teams_html:
                 name = team_html.find("div", { "class": "match-item-vs-team-name" }).get_text().strip()
-                region = team_html.find("span", { "class": "flag" }).get("class")[1].replace("mod-", "")
-                score = team_html.find("div", { "class": "match-item-vs-team-score" }).get_text().strip()
-                match_teams.append(MatchTeam(name, region, int(score)))
+                match_teams.append(name)
 
             match_list.append(Match(
                 id=match_id,

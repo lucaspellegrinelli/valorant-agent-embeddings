@@ -13,8 +13,8 @@ scraper = VLRScraper()
 
 # Event IDs from big tournaments (Masters, VCT Challengers, Champions...)
 event_ids = [
-    1015#, 1111, 1130, 1117, 1083, 1084, 1014, 1113, 1085, 1086, 800, 911, 984, 1063,
-    #1013, 998, 988, 983, 1012, 882, 991, 972, 926
+    1015, 1111, 1130, 1117, 1083, 1084, 1014, 1113, 1085, 1086, 800, 911, 984, 1063,
+    1013, 998, 988, 983, 1012, 882, 991, 972, 926
 ]
 
 # Getting all match IDs from all events
@@ -27,8 +27,8 @@ open(args.outpath, "w+", encoding="utf-8").close()
 
 # Scraping all matches
 with open(args.outpath, "a", encoding="utf-8") as f:
-    for match_id in match_ids:
-        print(f" > Scraping match {match_id}")
+    for i, match_id in enumerate(match_ids):
+        print(f" > Scraping match {match_id} ({i + 1:05d} / {len(match_ids):05d})")
         match_games = scraper.get_match_info(match_id)
         for game_info in match_games:
             f.write(json.dumps(asdict(game_info)) + "\n")
